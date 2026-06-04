@@ -17,10 +17,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 interface Props {
   accountId: string;
   currency: string;
-  granularity?: "DAILY" | "WEEKLY" | "MONTHLY";
+  granularity?: "daily" | "weekly" | "monthly";
 }
 
-export function BalanceChart({ accountId, currency, granularity = "MONTHLY" }: Props) {
+export function BalanceChart({ accountId, currency, granularity = "monthly" }: Props) {
   const from = fromSixMonthsAgo();
   const to = todayStr();
 

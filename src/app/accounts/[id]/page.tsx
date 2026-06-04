@@ -31,7 +31,7 @@ export default function AccountPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const [granularity, setGranularity] = useState<"DAILY" | "MONTHLY">("MONTHLY");
+  const [granularity, setGranularity] = useState<"daily" | "monthly">("monthly");
 
   const { data: account, isLoading: loadingAccount } = useQuery({
     queryKey: ["account", id],
@@ -115,11 +115,11 @@ export default function AccountPage({
               <CardTitle>Balance History</CardTitle>
               <Tabs
                 value={granularity}
-                onValueChange={(v) => setGranularity(v as "DAILY" | "MONTHLY")}
+                onValueChange={(v) => setGranularity(v as "daily" | "monthly")}
               >
                 <TabsList>
-                  <TabsTrigger value="DAILY">Daily</TabsTrigger>
-                  <TabsTrigger value="MONTHLY">Monthly</TabsTrigger>
+                  <TabsTrigger value="daily">Daily</TabsTrigger>
+                  <TabsTrigger value="monthly">Monthly</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
