@@ -1,0 +1,105 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    platform: linux/arm64
+    container_name: ledger_postgres
+    environment:
+      POSTGRES_USER: ledger
+      POSTGRES_PASSWORD: ledger_secret
+      POSTGRES_DB: ledger_core
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c shared_buffers=64MB
+      -c work_mem=4MB
+      -c maintenance_work_mem=32MB
+      -c effective_cache_size=128MB
+      -c max_connections=20
+      -c wal_buffers=8MB
+      -c checkpoint_completion_target=0.9
+      -c synchronous_commit=off
+      -c fsync=off
+      -c full_page_writes=off
+      -c autovacuum=off
+      -c log_min_duration_statement=1000
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledger -d ledger_core"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 64M
+
+  redis:
+    image: redis:7-alpine
+    platform: linux/arm64
+    container_name: ledger_redis
+    ports:
+      - "6380:6379"
+    command: >
+      redis-server
+      --save ""
+      --appendonly no
+      --maxmemory 96mb
+      --maxmemory-policy allkeys-lru
+      --hz 5
+      --dynamic-hz no
+      --lazyfree-lazy-eviction yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    platform: linux/arm64
+    container_name: ledger_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ledger
+      RABBITMQ_DEFAULT_PASS: ledger_secret
+      RABBITMQ_SERVER_ADDITIONAL_ERL_ARGS: >-
+        -rabbit collect_statistics_interval 30000
+        -rabbit consumer_timeout 3600000
+        +sbwt none
+        +sbwtdcpu none
+        +sbwtdio none
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+
+volumes:
+  postgres_data:

@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Account {
+  id          String   @id
+  name        String
+  type        String
+  currency    String   @db.Char(3)
+  description String?
+  metadata    Json     @default("{}")
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @updatedAt @db.Timestamptz(6)
+
+  entries Entry[]
+
+  @@map("accounts")
+}
+
+model Journal {
+  id                  String   @id
+  description         String?
+  reference           String?  @unique
+  metadata            Json     @default("{}")
+  fx_rate             Decimal? @db.Decimal(18, 8)
+  fx_base_currency    String?  @db.Char(3)
+  fx_quote_currency   String?  @db.Char(3)
+  reverses_journal_id String?
+  reversed_by_id      String?
+  status              String   @default("POSTED")
+  posted_at           DateTime @default(now()) @db.Timestamptz(6)
+  created_at          DateTime @default(now()) @db.Timestamptz(6)
+
+  reversesJournal    Journal?  @relation("JournalReversedBy", fields: [reverses_journal_id], references: [id])
+  reversedByJournals Journal[] @relation("JournalReversedBy")
+  reversedByJournal  Journal?  @relation("JournalReversedByRef", fields: [reversed_by_id], references: [id])
+  reversalJournals   Journal[] @relation("JournalReversedByRef")
+
+  entries Entry[]
+
+  @@index([posted_at(sort: Desc)])
+  @@map("journals")
+}
+
+model Entry {
+  id         String   @id
+  journal_id String
+  account_id String
+  direction  String
+  amount     BigInt
+  currency   String   @db.Char(3)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+
+  journal Journal @relation(fields: [journal_id], references: [id])
+  account Account @relation(fields: [account_id], references: [id])
+
+  @@index([account_id, created_at(sort: Desc)])
+  @@index([journal_id])
+  @@map("entries")
+}
+
+model FxRate {
+  id             String   @id
+  base_currency  String   @db.Char(3)
+  quote_currency String   @db.Char(3)
+  rate           Decimal  @db.Decimal(18, 8)
+  effective_date DateTime @db.Date
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([base_currency, quote_currency, effective_date])
+  @@map("fx_rates")
+}
+
+model ReconciliationRun {
+  id                String   @id
+  status            String
+  total_debits      BigInt
+  total_credits     BigInt
+  discrepancy       BigInt   @default(0)
+  affected_accounts String[]
+  run_at            DateTime @default(now()) @db.Timestamptz(6)
+  duration_ms       Int
+
+  @@map("reconciliation_runs")
+}
+
+model Outbox {
+  id         String    @id
+  event_type String
+  payload    Json
+  status     String    @default("PENDING")
+  attempts   Int       @default(0)
+  last_error String?
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  sent_at    DateTime? @db.Timestamptz(6)
+
+  @@map("outbox")
+}
